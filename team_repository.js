@@ -9,6 +9,8 @@ const url = dbService ? dbService.credentials.url : process.env.BUNDUTY_DB_URL;
 const dbName = "bunteams";
 var _ = require('lodash');
 var Promise = require('bluebird');
+const log4js = require('./config/log4js');
+const logger = log4js.getLogger('team');
 
 function TeamRepository() {
 	this.cloudant = Cloudant(url);
@@ -30,7 +32,7 @@ var listDocs = async function(repo) {
 		var result = await repo.db.viewAsync("teams", "by-id");
 		return _.map(result.rows, (doc) => doc.value);
 	} catch(ex) {
-		console.log(ex);
+		logger.error(ex);
 		return [];
 	}
 }
@@ -72,7 +74,7 @@ TeamRepository.prototype.list = async function() {
 		var teams = await listDocs(this);
 		return _.map(teams, convertDocToTeam);
 	} catch(ex) {
-		console.log(ex);
+		logger.error(ex);
 	}
 };
 
@@ -84,7 +86,7 @@ TeamRepository.prototype.removeAll = async function() {
 		}
 		var result = await this.db.bulkAsync({"docs": docs});
 	} catch(ex) {
-		console.log(ex);
+		logger.error(ex);
 	}
 	return this;
 }
@@ -99,14 +101,14 @@ TeamRepository.prototype.add = async function(team) {
 				var updatedTeam = convertTeamToDoc(team);
 				updatedTeam._rev = existing._rev;
 				await this.db.insertAsync(updatedTeam);
-				console.log("Team with ID " + team.team_id + " already exists. Updated existing team instead.");
+				logger.info("Team with ID " + team.team_id + " already exists. Updated existing team instead.");
 			}
 		} catch(ex) {
-			console.log(ex);
+			logger.error(ex);
 		}
 	} else {
-		console.log("Could not add invalid team");
-		console.log(team);
+		logger.error("Could not add invalid team");
+		logger.error(team);
 	}
 	return this;
 };
@@ -119,7 +121,7 @@ TeamRepository.prototype.getById = async function(teamId) {
 		if(ex.reason == "deleted")
 			return;
 
-		console.log(ex);
+		logger.error(ex);
 	}
 }
 

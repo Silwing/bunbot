@@ -1,0 +1,23 @@
+{
+  "appenders": {
+    "app": {
+      "type": "file",
+      "filename": "logs/bunduty.log"
+    },
+    "errors": {
+      "type": "file",
+      "filename": "logs/bunduty.err.log"
+    },
+    "errorFilter": {
+      "type": "logLevelFilter",
+      "appender": "errors",
+      "level": "error"
+    }
+  },
+  "categories": {
+    "default": {
+      "appenders": ["app", "errorFilter"],
+      "level": "debug"
+    }
+  }
+}

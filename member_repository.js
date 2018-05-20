@@ -5,6 +5,8 @@ const dbService = appEnv.getService("bunduty-cloudantNoSQLDB");
 const url = dbService ? dbService.credentials.url : process.env.BUNDUTY_DB_URL;
 const defaultTeam = "bunduty";
 var Promise = require('bluebird');
+const log4js = require('./config/log4js');
+const logger = log4js.getLogger('member');
 
 function MemberRepository(team_id) {
 	this.team_id = team_id || defaultTeam;
@@ -34,7 +36,7 @@ var listDocs = async function(repo) {
 		var result = await repo.db.viewAsync("bunees", "by-giving", {startkey: [repo.team_id], endkey: [repo.team_id, {}]});
 		return map(result.rows, convertByGivingViewDocToDoc);
 	} catch(ex) {
-		console.log(ex);
+		logger.error(ex);
 		return [];
 	}
 }
@@ -53,7 +55,7 @@ MemberRepository.prototype.removeById = async function(memberId) {
 		var doc = await this.db.getAsync(memberId);
 		await this.db.destroyAsync(doc._id, doc._rev);
 	} catch(ex) {
-		console.log(ex);
+		logger.error(ex);
 	}
 	return this;
 }
@@ -66,7 +68,7 @@ MemberRepository.prototype.removeAll = async function() {
 		}
 		var result = await this.db.bulkAsync({"docs": docs});
 	} catch(ex) {
-		console.log(ex);
+		logger.error(ex);
 	}
 	return this;
 }
@@ -76,7 +78,7 @@ MemberRepository.prototype.getLeastGiveCount = async function() {
 		var leastDocs = await this.db.viewAsync("bunees", "least-give", {group: true, reduce: true});
 		return (leastDocs.rows.length > 0) ? leastDocs.rows[0].value : 0;
 	} catch(ex) {
-		console.log(ex);
+		logger.error(ex);
 	}
 }
 
@@ -84,7 +86,7 @@ MemberRepository.prototype.add = async function(member) {
 	try {
 		await this.db.insertAsync({"_id": member.id.toString(), "giveCount": member.giveCount, "giveDate": member.giveDate, team_id: this.team_id});
 	} catch(ex) {
-		console.log(ex);
+		logger.error(ex);
 	}
 	return this;
 }
@@ -96,7 +98,7 @@ MemberRepository.prototype.update = async function(member) {
 		toUpdate.giveDate = member.giveDate;
 		await this.db.insertAsync(toUpdate);
 	} catch(ex) {
-		console.log(ex);
+		logger.error(ex);
 	}
 	return this;
 }
@@ -105,7 +107,7 @@ MemberRepository.prototype.getById = async function(memberId) {
 	try {
 		return convertDocToMember(await this.db.getAsync(memberId));
 	} catch(ex) {
-		console.log(ex);
+		logger.error(ex);
 	}
 }
 

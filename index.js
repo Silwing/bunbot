@@ -8,10 +8,15 @@ const bs = require('./bun_service');
 const ts = require('./team_repository');
 const cfenv = require('cfenv');
 const _ = require('lodash');
+const log4js = require('./config/log4js');
 
-// Store our app's ID and Secret. These we got from Step 1. 
+// Fetch client credentials from environment
 const clientId = process.env.SLACK_CLIENT_ID;
 const clientSecret = process.env.SLACK_CLIENT_SECRET;
+
+// Setup logging
+log4js.configure('config/log4js.json');
+const logger = log4js.getLogger('index');
 
 // Instantiate repository
 const teams = new ts.TeamRepository();
@@ -26,7 +31,7 @@ const appEnv = cfenv.getAppEnv();
 
 // Listen based on application environment from Cloud Foundry
 app.listen(appEnv.port, appEnv.bind, function () {
-    console.log("BunBot app listening on port " + appEnv.port);
+    logger.info("BunBot app listening on port " + appEnv.port);
 });
 
 var sendDoneForTeam = function(team) {
@@ -44,14 +49,14 @@ var sendRequestForTeam = async function(team) {
 
 // Schedule jobs to request next bunee and mark current bunee done
 var doneJob = async function(){
-    console.log("Triggered reminder for current bunee to mark duty done.");
+    logger.info("Triggered reminder for current bunee to mark duty done.");
     var teamList = await teams.list();
     _.forEach(teamList, sendDoneForTeam);
 };
 schedule.scheduleJob('0 10 * * 5', doneJob);
 
 var requestJob = async function() {
-    console.log("Triggered request for next bunee.");
+    logger.info("Triggered request for next bunee.");
     var teamList = await teams.list();
     _.forEach(teamList, sendRequestForTeam);
 };
@@ -71,7 +76,7 @@ app.get('/oauth', async function(req, res) {
     } else if (!req.query.code) {
         res.status(500);
         res.send({"Error": "Looks like we're not getting code."});
-        console.log("Looks like we're not getting code.");
+        logger.info("Got oauth request without the code query parameter, no authentication executed.");
     } else {
         // We'll do a GET call to Slack's `oauth.access` endpoint, passing our app's client ID, client secret, and the code we just got as query parameters.
         request({
@@ -81,7 +86,7 @@ app.get('/oauth', async function(req, res) {
 
         }, async function (error, response, body) {
             if (error) {
-                console.log(error);
+                logger.error(error);
             } else {
                 var auth = JSON.parse(body);
                 if(auth.ok) {
@@ -93,8 +98,8 @@ app.get('/oauth', async function(req, res) {
                         res.send("Something went wrong.");
                     }
                 } else {
-                    console.log("Something went wrong trying to authenticate.");
-                    console.log(auth);
+                    logger.error("Something went wrong trying to authenticate.");
+                    logger.debug(auth);
                     res.send("Something went wrong.");
                 }
             }
@@ -108,7 +113,7 @@ app.post('/command', async function(req, res) {
     var senderId = req.body.user_id;
     var teamId = req.body.team_id;
     var team = await teams.getById(teamId);
-    console.log("Handling command " + subCommand + " for sender " + senderId + " with team " + teamId);
+    logger.debug("Handling command " + subCommand + " for sender " + senderId + " with team " + teamId);
     switch(subCommand) {
     	case "list":
     		var list = await team.bunservice.list();
