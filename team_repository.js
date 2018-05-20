@@ -13,6 +13,7 @@ const log4js = require('./config/log4js');
 const logger = log4js.getLogger('team');
 
 function TeamRepository() {
+	logger.debug("Creating team repository object");
 	this.cloudant = Cloudant(url);
 	this.db = this.cloudant.use(dbName);
 	Promise.promisifyAll(this.db);
@@ -41,7 +42,8 @@ var docById = async function(repo, teamId) {
 	try {
 		return await repo.db.getAsync(teamId.toString());
 	} catch(ex) {
-		throw ex;
+		logger.error(ex);
+		return {};
 	}
 }
 
@@ -75,6 +77,7 @@ TeamRepository.prototype.list = async function() {
 		return _.map(teams, convertDocToTeam);
 	} catch(ex) {
 		logger.error(ex);
+		return [];
 	}
 };
 
@@ -122,7 +125,13 @@ TeamRepository.prototype.getById = async function(teamId) {
 			return;
 
 		logger.error(ex);
+		return {};
 	}
+}
+
+TeamRepository.prototype.debug = async function() {
+	var list = await this.list();
+	return _.map(list, (elm) => _.omit(elm, ["access_token", "bunchannel"]));
 }
 
 

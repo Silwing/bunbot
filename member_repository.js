@@ -9,6 +9,7 @@ const log4js = require('./config/log4js');
 const logger = log4js.getLogger('member');
 
 function MemberRepository(team_id) {
+	logger.debug("Creating member repository object for " + team_id);
 	this.team_id = team_id || defaultTeam;
 	this.cloudant = Cloudant(url);
 	this.db = this.cloudant.use("bunduty");
@@ -109,6 +110,31 @@ MemberRepository.prototype.getById = async function(memberId) {
 	} catch(ex) {
 		logger.error(ex);
 	}
+}
+
+MemberRepository.prototype.isAdmin = async function(memberId) {
+	try {
+		var member = await this.db.getAsync(memberId);
+		logger.debug(member);
+		return member.isAdmin === true;
+	} catch(ex) {
+		logger.error(ex);
+	}
+}
+
+MemberRepository.prototype.addAdmin = async function(memberId) {
+	try {
+		var member = await this.db.getAsync(memberId);
+		member.isAdmin = true;
+		await this.db.insertAsync(member);
+	} catch(ex) {
+		logger.error(ex);
+		if(ex.statusCode == 404) {
+			return false;
+		}
+		throw new Error("Could not add admin");
+	}
+	return true;
 }
 
 module.exports.MemberRepository = MemberRepository;
